@@ -1,0 +1,14 @@
+:host {
+  display: block;
+  margin-top: 1rem;
+}
+/* mat-expansion-panel {
+  font-size: 1.25em;
+  background-color: white;
+  background: white;
+  color: #00838f;
+  font-weight: 500;
+} */
+.info-text {
+  text-align: center;
+}
