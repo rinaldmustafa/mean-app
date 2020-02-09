@@ -26,7 +26,6 @@ app.use((req, res, next) => {
     "GET, POST, PATCH, DELETE, OPTIONS"
   );
   next();
-
 });
 
 app.post("/api/posts", (req, res, next) => {
