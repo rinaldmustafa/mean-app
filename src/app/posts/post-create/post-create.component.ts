@@ -2,7 +2,8 @@
 import { Post } from '../post.model';
 import { NgForm } from '@angular/forms';
 import { PostService } from '../posts.service';
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { ActivatedRoute, ParamMap } from '@angular/router';
 
 @Component({
   selector: 'app-post',
@@ -10,25 +11,29 @@ import { Component } from '@angular/core';
   styleUrls: ['./post-create.component.css']
 })
 
-export class PostCreateComponent {
-  // enteredTitle = '';
-  // enteredContent = '';
-  // @Output() postCreated = new EventEmitter<Post>(); video 28 e heqim
+export class PostCreateComponent implements OnInit {
+  enteredTitle = '';
+  enteredContent = '';
+  // @Output() postCreated = new EventEmitter<Post>();
+  private mode = 'create';
+  private postId: string;
+  post: Post;
 
-  constructor(public postService: PostService) {}
-  // newPost = 'No content';
+  constructor(public postService: PostService, public route: ActivatedRoute) {}
+  
+  ngOnInit() {
+    this.route.paramMap.subscribe((paramMap: ParamMap) => {
+      if (paramMap.has('postId')) {
+        this.mode = 'edit';
+        this.postId = paramMap.get('postId');
+        this.post = this.postService.getPost(this.postId);
+      } else {
+        this.mode = 'create';
+        this.postId = null;
+      }
+    }); // paramMap is observable
+  }
 
-  // onAddPost(userInput: HTMLTextAreaElement) {
-  //   this.newPost = userInput.value;
-  // }
-  // onAddPost() {
-    // this.newPost = this.enteredValue;
-  //   const post: Post = {
-  //     title: this.enteredTitle,
-  //     content: this.enteredContent
-  //   };
-  //   this.postCreated.emit(post);
-  // }
   onAddPost(form: NgForm) {
     if (form.invalid) {
       return;
