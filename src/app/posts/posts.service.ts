@@ -54,4 +54,14 @@ export class PostService {
         this.postsUpdated.next([...this.posts]);
       });
   }
+    // we pull out all the properties of an object and add them to a new object cuz not lose any data
+  // to original one, we clone them with spread operator
+  getPost(id: string) {
+    return {...this.posts.find((p) => p.id === id)};
+  }
+
+  updatePost(id: string, title: string, content: string) {
+    // tslint:disable-next-line: object-literal-shorthand
+    const post: Post = {id: id, title: title, content: content};
+  }
 }
