@@ -55,9 +55,12 @@ export class PostService {
       });
   }
     // we pull out all the properties of an object and add them to a new object cuz not lose any data
-  // to original one, we clone them with spread operator
+  // to original one, we clone them with spread operator(that method is in comment now cuz
+  // we make sink call(http), we cant subscribe here to an unsinkron(future call), we subscribe to ngOn..)
+  // cuz affect subsciption in this subject
   getPost(id: string) {
-    return {...this.posts.find((p) => p.id === id)};
+    // return {...this.posts.find((p) => p.id === id)};
+    return this.http.get<{_id: string, title: string, content: string}>('http://localhost:3000/api/posts/' + id);
   }
 
   updatePost(id: string, title: string, content: string) {
@@ -65,7 +68,11 @@ export class PostService {
     const post: Post = {id: id, title: title, content: content};
     this.http.put('http://localhost:3000/api/posts/' + id, post)
       .subscribe(response => {
-        console.log(response);
+        const updatedPosts = [...this.posts];  // clone our posts
+        const oldPostIndex = updatedPosts.findIndex(p => p.id === post.id); // gjejme id e post qe kerkojme per replace
+        updatedPosts[oldPostIndex] = post;
+        this.posts = updatedPosts; // we update our old posts in immutable way
+        this.postsUpdated.next([...this.posts]); // we send this event through subject and send a copy of updated posts
       });
   }
 }
