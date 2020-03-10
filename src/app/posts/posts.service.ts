@@ -1,15 +1,16 @@
 import { Post } from './post.model';
-import { Subject, from } from 'rxjs';
+import { Subject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { map } from 'rxjs/operators';
+import { Router } from '@angular/router';
 // @Injectable({providedIn: 'root'}) -- nese do servisin me perdor global pa app.module insert to provoiders
 @Injectable({providedIn: 'root'})
 export class PostService {
   private posts: Post[] = [];
   private postsUpdated = new Subject<Post[]>();
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient, private router: Router) {}
   getPosts() {
     // return [...this.posts];
      this.http.get<{message: string, posts: any}>('http://localhost:3000/api/posts')
@@ -32,15 +33,20 @@ export class PostService {
     return this.postsUpdated.asObservable(); // returns an object we can listen
   }
 
-  addPost(title: string, content: string) {
+  addPost(title: string, content: string, image: File) {
     // tslint:disable-next-line: object-literal-shorthand
-    const post: Post = {id: null, title: title, content: content};
-    this.http.post<{message: string, postId: string}>('http://localhost:3000/api/posts', post)
+    const postData = new FormData();
+    postData.append("title", title);
+    postData.append("content", content);
+    postData.append("image", image, title); // title will be part of filename backend
+    this.http.post<{message: string, postId: string}>('http://localhost:3000/api/posts', postData)
       .subscribe(res => {
+        const post: Post = {id: res.postId, title: title, content: content};
         const id = res.postId; // we get the id of just created post
-        post.id = id; // overwrote the const above with the real id from db
+        // post.id = id; // overwrote the const above with the real id from db
         this.posts.push(post);
         this.postsUpdated.next([...this.posts]);
+        this.router.navigate(["/"]);
       });
     // this.postsUpdated.next([...this.posts]); // emits whenever we add a post, and is a copy of my post
     // and it is a copy of posts after we updated them...dmth i merr mas pushit menjiher si te vjetra kete te riun
@@ -73,6 +79,7 @@ export class PostService {
         updatedPosts[oldPostIndex] = post;
         this.posts = updatedPosts; // we update our old posts in immutable way
         this.postsUpdated.next([...this.posts]); // we send this event through subject and send a copy of updated posts
+        this.router.navigate(["/"]);
       });
   }
 }
