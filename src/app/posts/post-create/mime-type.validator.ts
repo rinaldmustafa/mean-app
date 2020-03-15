@@ -1,10 +1,13 @@
-import { Observable, Observer } from "rxjs";
+import { Observable, Observer, of } from "rxjs";
 import { AbstractControl } from "@angular/forms";
 
 export const mimeType = (
   control: AbstractControl // what is gonna return is a promise or obs error
 ):  Promise<{ [key: string]: any}> | Observable<{ [key: string]: any}> => {
   // fn body
+  if (typeof(control.value) === 'string') {
+    return of(null);
+  }
   const file = control.value as File;
   const fileReader = new FileReader();
   const frObs = Observable.create((observer: Observer<{ [key: string]: any}>) => {

@@ -8,24 +8,28 @@ import { Router } from '@angular/router';
 @Injectable({providedIn: 'root'})
 export class PostService {
   private posts: Post[] = [];
-  private postsUpdated = new Subject<Post[]>();
+  private postsUpdated = new Subject<{ posts: Post[], postCount: number}>();
 
   constructor(private http: HttpClient, private router: Router) {}
-  getPosts() {
-    // return [...this.posts];
-     this.http.get<{message: string, posts: any}>('http://localhost:3000/api/posts')
+
+  getPosts(pageSize: number, currentPage: number) {
+     const queryParams = `?pagesize=${pageSize}&page=${currentPage}`;
+     this.http.get<{message: string, posts: any, maxPosts: number}>('http://localhost:3000/api/posts' + queryParams)
     .pipe(map((postData) => {
-        return postData.posts.map(post => {
-          return {
-            title: post.title,
-            content: post.content,
-            id: post._id,
-          };
-        });
+        return {
+          posts: postData.posts.map(post => {
+            return {
+              title: post.title,
+              content: post.content,
+              id: post._id,
+              imagePath: post.imagePath
+            };
+        }),
+         maxPosts: postData.maxPosts };
       }))
-    .subscribe((postsTransformed) => {
-        this.posts = postsTransformed;
-        this.postsUpdated.next([...this.posts]);
+    .subscribe((postsTransformedData) => {
+        this.posts = postsTransformedData.posts;
+        this.postsUpdated.next({ posts: [...this.posts], postCount: postsTransformedData.maxPosts});
       });
   }
 
@@ -34,52 +38,40 @@ export class PostService {
   }
 
   addPost(title: string, content: string, image: File) {
-    // tslint:disable-next-line: object-literal-shorthand
     const postData = new FormData();
-    postData.append("title", title);
-    postData.append("content", content);
-    postData.append("image", image, title); // title will be part of filename backend
-    this.http.post<{message: string, postId: string}>('http://localhost:3000/api/posts', postData)
+    postData.append('title', title);
+    postData.append('content', content);
+    postData.append('image', image, title); // title will be part of filename backend
+    this.http.post<{message: string, post: Post}>('http://localhost:3000/api/posts', postData)
       .subscribe(res => {
-        const post: Post = {id: res.postId, title: title, content: content};
-        const id = res.postId; // we get the id of just created post
-        // post.id = id; // overwrote the const above with the real id from db
-        this.posts.push(post);
-        this.postsUpdated.next([...this.posts]);
-        this.router.navigate(["/"]);
+        this.router.navigate(['/']); // we navigate main after add post and ngONINT fetch data auto
       });
-    // this.postsUpdated.next([...this.posts]); // emits whenever we add a post, and is a copy of my post
-    // and it is a copy of posts after we updated them...dmth i merr mas pushit menjiher si te vjetra kete te riun
   }
 
   deletePost(postId: string) {
-    this.http.delete('http://localhost:3000/api/posts/' + postId)
-      .subscribe(() => {
-        const updatedPosts = this.posts.filter(post => post.id !== postId);
-        this.posts = updatedPosts;
-        this.postsUpdated.next([...this.posts]);
-      });
-  }
-    // we pull out all the properties of an object and add them to a new object cuz not lose any data
-  // to original one, we clone them with spread operator(that method is in comment now cuz
-  // we make sink call(http), we cant subscribe here to an unsinkron(future call), we subscribe to ngOn..)
-  // cuz affect subsciption in this subject
-  getPost(id: string) {
-    // return {...this.posts.find((p) => p.id === id)};
-    return this.http.get<{_id: string, title: string, content: string}>('http://localhost:3000/api/posts/' + id);
+    return this.http.delete('http://localhost:3000/api/posts/' + postId); // we subs to method
   }
 
-  updatePost(id: string, title: string, content: string) {
-    // tslint:disable-next-line: object-literal-shorthand
-    const post: Post = {id: id, title: title, content: content};
-    this.http.put('http://localhost:3000/api/posts/' + id, post)
+  getPost(id: string) {
+    // return {...this.posts.find((p) => p.id === id)};
+    return this.http.get<{_id: string, title: string, content: string, imagePath: string}>('http://localhost:3000/api/posts/' + id);
+  }
+
+  updatePost(id: string, title: string, content: string, image: File | string) {
+    let postData: Post | FormData;
+    if (typeof(image) === 'object') {
+      postData = new FormData();
+      postData.append('id', id);
+      postData.append('title', title);
+      postData.append('content', content);
+      postData.append('image', image, title);
+    } else {
+       // tslint:disable-next-line: object-literal-shorthand
+      postData = { id: id, title: title, content: content, imagePath: image};
+    }
+    this.http.put('http://localhost:3000/api/posts/' + id, postData)
       .subscribe(response => {
-        const updatedPosts = [...this.posts];  // clone our posts
-        const oldPostIndex = updatedPosts.findIndex(p => p.id === post.id); // gjejme id e post qe kerkojme per replace
-        updatedPosts[oldPostIndex] = post;
-        this.posts = updatedPosts; // we update our old posts in immutable way
-        this.postsUpdated.next([...this.posts]); // we send this event through subject and send a copy of updated posts
-        this.router.navigate(["/"]);
+        this.router.navigate(['/']);
       });
   }
 }

@@ -20,21 +20,27 @@ const filestorage = multer.diskStorage({
     callback(error, "backend/images");
   },
   filename: (req, file, callback) => {
-    const name = file.originalname.toLowerCase().split('').join('-'); // there is a original name property
+    const name = file.originalname.toLowerCase().split(" ").join('-'); // there is a original name property
     const ext = MIME_TYPE_MAP[file.mimetype]; // we get the extension which is 'image/smth' format
     callback(null, name + '-' + Date.now() + '.' + ext);
   }
 });
 
 router.post("", multer({storage: filestorage}).single("image"), (req, res, next) => {
+  const url = req.protocol + '://' + req.get("host");
   const post = new Post({
     title: req.body.title,
-    content: req.body.content
+    content: req.body.content,
+    imagePath: url + "/images/" + req.file.filename // store our images and accessible after our domain and name of file(multer does for us)
   });
   post.save().then(createdPost => { // e marrim id ne addpost service
       res.status(201).json({
       message: 'The post is created successfully!',
-      postId: createdPost._id
+      // postId: createdPost._id
+      post: {
+        ...createdPost, // we send other properties of the new object and add the id as extra feature
+        id: createdPost._id
+      }
     });
   });
 
@@ -51,11 +57,17 @@ Post.findById(req.params.id).then(post => {
   })
 });
 
-router.put("/:id", (req, res, next) => {
+router.put("/:id", multer({storage: filestorage}).single("image"), (req, res, next) => {
+  let imagePath = req.body.imagePath;
+  if(req.file) {
+  const url = req.protocol + '://' + req.get("host");
+  imagePath = url + "/images/" + req.file.filename
+}
 const post = new Post({
   _id: req.body.id,
   title: req.body.title,
-  content: req.body.content
+  content: req.body.content,
+  imagePath: imagePath
 });
 Post.updateOne({ _id: req.params.id}, post).then(result => {
     res.status(200).json({ message: 'Updated successfully'});
@@ -63,10 +75,24 @@ Post.updateOne({ _id: req.params.id}, post).then(result => {
 });
 
 router.get("", (req, res, next) => {
-Post.find().then(documents => {
-  res.status(200).json({
-  message: "Posts fetched succesfully!",
-  posts: documents
+  const pageSize = +req.query.pagesize;
+  const currentPage = +req.query.page;
+  let fetchedPosts;
+  const postQuery = Post.find();
+  if (pageSize && currentPage) {
+    postQuery.skip(pageSize * (currentPage - 1))   // 10 * (3-1)
+            .limit(pageSize); // takes amount of elements
+  }
+  postQuery      // we get all posts
+  .then(documents => {
+    fetchedPosts = documents;
+    return Post.count();    // count them
+    })
+  .then(count => {                   // we got the count auto as result in then chain
+    res.status(200).json({
+      message: "Posts fetched succesfully!",
+      posts: fetchedPosts,
+      maxPosts: count
     });
   })
 });
