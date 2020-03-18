@@ -48,7 +48,9 @@ router.post("/login", (req, res, next) => {
           "sercret_key_which_is_long_string",
           { expiresIn: "1h"} );  //this method creates a new token from input data
         res.status(200).json({
-          token: token
+          token: token,
+          expiresIn: 3600,
+          userId: fetchedUser._id
         });
     })
     .catch(error => {

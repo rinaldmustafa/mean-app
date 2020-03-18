@@ -32,7 +32,8 @@ router.post("", checkAuth, multer({storage: filestorage}).single("image"), (req,
   const post = new Post({
     title: req.body.title,
     content: req.body.content,
-    imagePath: url + "/images/" + req.file.filename // store our images and accessible after our domain and name of file(multer does for us)
+    imagePath: url + "/images/" + req.file.filename, // store our images and accessible after our domain and name of file(multer does for us)
+    creator: req.userDatas.userId
   });
   post.save().then(createdPost => { // e marrim id ne addpost service
       res.status(201).json({
@@ -68,10 +69,15 @@ const post = new Post({
   _id: req.body.id,
   title: req.body.title,
   content: req.body.content,
-  imagePath: imagePath
+  imagePath: imagePath,
+  creator: req.userDatas.userId
 });
-Post.updateOne({ _id: req.params.id}, post).then(result => {
-    res.status(200).json({ message: 'Updated successfully'});
+Post.updateOne({ _id: req.params.id , creator: req.userDatas.userId }, post).then(result => {
+    if (result.nModified > 0) {
+      res.status(200).json({ message: 'Updated successfully'});
+    } else {
+      res.status(401).json({ message: 'not authorized to edit!'});
+    }
   });
 });
 
@@ -99,9 +105,13 @@ router.get("", (req, res, next) => {
 });
 
 router.delete("/:id", checkAuth, (req, res, next) => {
-  Post.deleteOne({ _id: req.params.id}).then(result => {
-    console.log(result); // params gives access to all encoded parametres in url
-    res.status(200).json({ message: 'Post deleted successfully!'});
+  Post.deleteOne({ _id: req.params.id, creator: req.userDatas.userId})
+    .then(result => { // params gives access to all encoded parametres in url
+      if (result.n > 0) {
+        res.status(200).json({ message: 'Deletion successfully'});
+      } else {
+        res.status(401).json({ message: 'not authorized to delete!'});
+      }
   });
 });
 
